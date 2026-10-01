@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Solutions Sites 1</title>
+  <title>Web Viewer</title>
   
-  <!-- Web App Manifest for Standalone / Full-Screen Mode -->
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#121212">
 
   <style>
-    /* Fullscreen reset */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
     html, body {
@@ -28,18 +27,173 @@
     }
 
     /* Fullscreen iframe */
-    iframe {
+    #content-frame {
       width: 100%;
       height: 100%;
       border: none;
       display: block;
     }
+
+    /* Floating Navigation / Control Bar */
+    #nav-bar {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      background: rgba(20, 20, 20, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 8px 12px;
+      border-radius: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      z-index: 9999;
+      max-width: 90vw;
+      width: 600px;
+    }
+
+    /* Hidden state for full immersion */
+    #nav-bar.hidden {
+      transform: translate(-50%, -80px);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #url-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      outline: none;
+      transition: background 0.2s;
+    }
+
+    #url-input:focus {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    #url-input::placeholder {
+      color: #aaa;
+    }
+
+    .btn {
+      background: #007aff;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 8px 12px;
+    }
+
+    /* Small unhide trigger button in top-right corner */
+    #toggle-trigger {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 9998;
+      font-size: 16px;
+      opacity: 0.3;
+      transition: opacity 0.2s;
+    }
+
+    #toggle-trigger:hover {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Replace with your desired website URL -->
-  <iframe src="https://www.crazygames.com/" allow="fullscreen; autoplay; encrypted-media; picture-in-picture"></iframe>
+  <!-- Floating Control Bar -->
+  <div id="nav-bar">
+    <input type="text" id="url-input" placeholder="Paste site URL (e.g., wikipedia.org)..." autocomplete="off" spellcheck="false">
+    <button class="btn" id="go-btn">Go</button>
+    <button class="btn btn-secondary" id="hide-btn" title="Hide Navigation Bar">▲</button>
+  </div>
+
+  <!-- Small corner button to bring back the bar when hidden -->
+  <button id="toggle-trigger" title="Show Bar">⚙️</button>
+
+  <!-- Embedded Web Content -->
+  <iframe id="content-frame" src="about:blank" allow="fullscreen; autoplay; encrypted-media; picture-in-picture"></iframe>
+
+  <script>
+    const navBar = document.getElementById('nav-bar');
+    const urlInput = document.getElementById('url-input');
+    const goBtn = document.getElementById('go-btn');
+    const hideBtn = document.getElementById('hide-btn');
+    const toggleTrigger = document.getElementById('toggle-trigger');
+    const contentFrame = document.getElementById('content-frame');
+
+    // Function to load the URL
+    function loadUrl(url) {
+      if (!url) return;
+      
+      let formattedUrl = url.trim();
+      
+      // Auto-add https:// if omitted
+      if (!/^https?:\/\//i.test(formattedUrl)) {
+        formattedUrl = 'https://' + formattedUrl;
+      }
+
+      urlInput.value = formattedUrl;
+      contentFrame.src = formattedUrl;
+
+      // Save to localStorage so it remembers the URL on refresh
+      localStorage.setItem('saved_embed_url', formattedUrl);
+    }
+
+    // Load initial site (from local storage, or default fallback)
+    const savedUrl = localStorage.getItem('saved_embed_url') || 'https://en.wikipedia.org';
+    loadUrl(savedUrl);
+
+    // Event Listeners
+    goBtn.addEventListener('click', () => loadUrl(urlInput.value));
+
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        loadUrl(urlInput.value);
+      }
+    });
+
+    // Hide/Show Bar Controls
+    hideBtn.addEventListener('click', () => {
+      navBar.classList.add('hidden');
+    });
+
+    toggleTrigger.addEventListener('click', () => {
+      navBar.classList.toggle('hidden');
+    });
+  </script>
 
 </body>
 </html>
